@@ -28,6 +28,8 @@ def roi_min_vals(x, y, z, radius=5):
 
 
 def roi_max_vals(x, y, z, radius=5, template_dims: list = [91, 109, 91]):
+    if template_dims is None:
+        raise ValueError("template_dims must be provided")
     outvals = []
     for k, val in enumerate([x, y, z]):
         if val + radius > template_dims[k]:
@@ -130,8 +132,12 @@ def load_images(reg_image: str, template_path: str) -> dict:
     :return:
     :image_dict containing the registered image, template and mask
     """
+    try:
+        reg_img = ants.image_read(registered_fn)
+    except Exception as e:
+        raise RuntimeError(f"Could not create ImageIO object for file {registered_fn}") from e
     image_dict = {}
-    image_dict["reg_image"] = ants.image_read(reg_image)
+    image_dict["reg_image"] = reg_img #ants.image_read(reg_image)
     image_dict["template_image"] = ants.image_read(template_path)
     image_dict["template_mask"] = ants.image_read(
         f"{template_path.split('.')[0]}_mask.nii.gz"
@@ -148,6 +154,8 @@ def save_images(sub_fldr: str, image_res: dict, radius: float):
     """
     # if not os.path.exists(sub_fldr):
     #     os.makedirs(sub_fldr)
+    out_dir = os.path.dirname(out_path) or "."
+    os.makedirs(out_dir, exist_ok=True)
     print(f"Saving:")
     for k, v in image_res.items():
         outpath = os.path.join(sub_fldr, f"r2m2_{k}_rad{radius}.nii")

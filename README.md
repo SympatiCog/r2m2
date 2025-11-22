@@ -106,8 +106,19 @@ python -c "import numba; print(f'Numba version: {numba.__version__}')"
 
 ## Usage
 
+R2M2 provides two implementations that can be run from the command line:
+- **r2m2_base.py**: Reference implementation (slower, well-tested)
+- **r2m2_numba.py**: High-performance Numba implementation (10-50x faster, recommended)
+
 ### Basic Usage
 
+**Numba-accelerated version (recommended):**
+```bash
+python r2m2_numba.py --search_string './subjects/sub-*/registered_t2_img.nii.gz' \
+                     --num_python_jobs 4
+```
+
+**Reference version:**
 ```bash
 python r2m2_base.py --search_string './subjects/sub-*/registered_t2_img.nii.gz' \
                     --num_python_jobs 4
@@ -122,6 +133,8 @@ Each subject folder must contain:
 
 ### Command-Line Arguments
 
+#### Common Arguments (both versions)
+
 | Argument | Type | Default | Description |
 |----------|------|---------|-------------|
 | `--list_path` | str | None | Path to text file containing subject folder paths (one per line) |
@@ -130,6 +143,13 @@ Each subject folder must contain:
 | `--num_itk_cores` | int | 1 | ITK threads per process (total parallelism = jobs × cores) |
 
 **Note**: Provide either `--list_path` OR `--search_string`, not both.
+
+#### Numba-Specific Arguments (r2m2_numba.py only)
+
+| Argument | Type | Default | Description |
+|----------|------|---------|-------------|
+| `--use-numba-mi` | flag | False | Use Numba's approximate MI (faster but less accurate). Default uses ANTs MI (hybrid mode) |
+| `--radius` | int | 3 | ROI radius for similarity computation |
 
 ### Examples
 
@@ -141,20 +161,73 @@ echo "/data/sub-001" > subjects.txt
 echo "/data/sub-002" >> subjects.txt
 echo "/data/sub-003" >> subjects.txt
 
-# Run R2M2
+# Run with Numba (recommended)
+python r2m2_numba.py --list_path subjects.txt --num_python_jobs 8
+
+# Or with reference implementation
 python r2m2_base.py --list_path subjects.txt --num_python_jobs 8
 ```
 
 #### Process subjects using glob pattern
 
 ```bash
+# Numba version (hybrid mode - uses ANTs MI for accuracy)
+python r2m2_numba.py --search_string './data/sub-*/ses-*/anat/registered.nii.gz' \
+                     --num_python_jobs 4 \
+                     --num_itk_cores 2
+
+# Reference version
 python r2m2_base.py --search_string './data/sub-*/ses-*/anat/registered.nii.gz' \
                     --num_python_jobs 4 \
                     --num_itk_cores 2
 ```
 
+#### Use Numba with approximate MI (fastest)
+
+```bash
+# Maximum speed - uses Numba's approximate MI
+python r2m2_numba.py --list_path subjects.txt \
+                     --use-numba-mi \
+                     --num_python_jobs 8
+```
+
+#### Custom radius and parallelism
+
+```bash
+# Larger ROI radius with more parallelism
+python r2m2_numba.py --search_string './sub-*/registered.nii.gz' \
+                     --radius 5 \
+                     --num_python_jobs 8 \
+                     --num_itk_cores 1
+```
+
 #### Use as Python module
 
+**Using Numba-accelerated version (recommended):**
+```python
+from r2m2_numba import compute_r2m2_numba, load_images, save_images, comp_stats
+
+# Load images
+img_dict = load_images(
+    reg_image='sub-001/registered_t2.nii.gz',
+    template_path='templates/MNI152_T1_2mm.nii.gz'
+)
+
+# Compute R2M2 metrics (hybrid mode: ANTs MI + Numba MSE/CORR)
+results = compute_r2m2_numba(img_dict, radius=3, subsess='sub-001', use_numba_mi=False)
+
+# Or use full Numba mode (fastest)
+# results = compute_r2m2_numba(img_dict, radius=3, subsess='sub-001', use_numba_mi=True)
+
+# Save results
+save_images('sub-001/output', results, radius=3)
+
+# Compute statistics
+stats = comp_stats(results, img_dict)
+print(stats)
+```
+
+**Using reference version:**
 ```python
 import r2m2_base
 
@@ -193,14 +266,26 @@ r2m2_dm_CORR_rad3.nii     # Demeaned Correlation map
 
 #### Summary Statistics CSV
 
-`r2m2_summary_stats_YYYY_MM_DD-HHMMSS_PID.csv`:
+**r2m2_base.py output:**
+- `r2m2_summary_stats_YYYY_MM_DD-HHMMSS.csv`
+
+**r2m2_numba.py output:**
+- `r2m2_numba_summary_stats_YYYY_MM_DD-HHMMSS.csv`
+
+Contents:
 - Per-subject mean, std, z-score for each metric
 - Whole-brain similarity measures
 - One row per successfully processed subject
 
 #### Error Log
 
-`r2m2_errs_YYYY_MM_DD-HHMMSS_PID.txt`:
+**r2m2_base.py output:**
+- `r2m2_errs_YYYY_MM_DD-HHMMSS.txt`
+
+**r2m2_numba.py output:**
+- `r2m2_numba_errs_YYYY_MM_DD-HHMMSS.txt`
+
+Contents:
 - Lists subjects that failed processing
 - Includes error messages for debugging
 

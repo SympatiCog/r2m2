@@ -115,12 +115,14 @@ R2M2 provides two implementations that can be run from the command line:
 **Numba-accelerated version (recommended):**
 ```bash
 python r2m2_numba.py --search_string './subjects/sub-*/registered_t2_img.nii.gz' \
+                     --template_path /path/to/MNI152_T1_2mm.nii.gz \
                      --num_python_jobs 4
 ```
 
 **Reference version:**
 ```bash
 python r2m2_base.py --search_string './subjects/sub-*/registered_t2_img.nii.gz' \
+                    --template_path /path/to/MNI152_T1_2mm.nii.gz \
                     --num_python_jobs 4
 ```
 
@@ -135,17 +137,17 @@ Each subject folder must contain:
 
 #### Common Arguments (both versions)
 
-| Argument | Type | Default | Description |
-|----------|------|---------|-------------|
-| `--list_path` | str | None | Path to text file containing subject folder paths (one per line) |
-| `--search_string` | str | None | Glob pattern to find subject folders (e.g., `'./sub-*/*.nii.gz'`) |
-| `--num_python_jobs` | int | 4 | Number of parallel Python processes |
-| `--num_itk_cores` | int | 1 | ITK threads per process (total parallelism = jobs × cores) |
-| `--template_path` | str | None | Path to template image (e.g., `MNI152_T1_2mm.nii.gz`). Mask must exist as `{template}_mask.nii.gz` |
+| Argument | Type | Required | Default | Description |
+|----------|------|----------|---------|-------------|
+| `--list_path` | str | * | None | Path to text file containing subject folder paths (one per line) |
+| `--search_string` | str | * | None | Glob pattern to find subject folders (e.g., `'./sub-*/*.nii.gz'`) |
+| `--template_path` | str | **Yes** | None | Path to template image (e.g., `MNI152_T1_2mm.nii.gz`). Mask must exist as `{template}_mask.nii.gz` |
+| `--num_python_jobs` | int | No | 4 | Number of parallel Python processes |
+| `--num_itk_cores` | int | No | 1 | ITK threads per process (total parallelism = jobs × cores) |
 
 **Notes**:
-- Provide either `--list_path` OR `--search_string`, not both
-- If `--template_path` is not provided, uses hardcoded default path
+- `*` Either `--list_path` OR `--search_string` is required (not both)
+- `--template_path` is **required** to ensure users explicitly specify which template to use
 
 #### Numba-Specific Arguments (r2m2_numba.py only)
 
@@ -165,10 +167,14 @@ echo "/data/sub-002" >> subjects.txt
 echo "/data/sub-003" >> subjects.txt
 
 # Run with Numba (recommended)
-python r2m2_numba.py --list_path subjects.txt --num_python_jobs 8
+python r2m2_numba.py --list_path subjects.txt \
+                     --template_path /templates/MNI152_T1_2mm.nii.gz \
+                     --num_python_jobs 8
 
 # Or with reference implementation
-python r2m2_base.py --list_path subjects.txt --num_python_jobs 8
+python r2m2_base.py --list_path subjects.txt \
+                    --template_path /templates/MNI152_T1_2mm.nii.gz \
+                    --num_python_jobs 8
 ```
 
 #### Process subjects using glob pattern
@@ -176,11 +182,13 @@ python r2m2_base.py --list_path subjects.txt --num_python_jobs 8
 ```bash
 # Numba version (hybrid mode - uses ANTs MI for accuracy)
 python r2m2_numba.py --search_string './data/sub-*/ses-*/anat/registered.nii.gz' \
+                     --template_path /templates/MNI152_T1_2mm.nii.gz \
                      --num_python_jobs 4 \
                      --num_itk_cores 2
 
 # Reference version
 python r2m2_base.py --search_string './data/sub-*/ses-*/anat/registered.nii.gz' \
+                    --template_path /templates/MNI152_T1_2mm.nii.gz \
                     --num_python_jobs 4 \
                     --num_itk_cores 2
 ```
@@ -190,6 +198,7 @@ python r2m2_base.py --search_string './data/sub-*/ses-*/anat/registered.nii.gz' 
 ```bash
 # Maximum speed - uses Numba's approximate MI
 python r2m2_numba.py --list_path subjects.txt \
+                     --template_path /templates/MNI152_T1_2mm.nii.gz \
                      --use-numba-mi \
                      --num_python_jobs 8
 ```
@@ -199,6 +208,7 @@ python r2m2_numba.py --list_path subjects.txt \
 ```bash
 # Larger ROI radius with more parallelism
 python r2m2_numba.py --search_string './sub-*/registered.nii.gz' \
+                     --template_path /templates/MNI152_T1_2mm.nii.gz \
                      --radius 5 \
                      --num_python_jobs 8 \
                      --num_itk_cores 1

@@ -180,7 +180,7 @@ def save_images(sub_fldr: str, image_res: dict, radius: float):
 def main(
     sub_folder: str,
     reg_image_name: str = "registered_t2_img.nii.gz",
-    template_path: str = "/Users/stan/Projects/R2M2_processing/data/external/mean_space_2mm_brain.nii.gz",
+    template_path: str = None,
     radius=3,
 ) -> dict:
     """
@@ -190,6 +190,9 @@ def main(
     :param reg_image_name: name of the registered image
     :param template_path: path to the template
     """
+    if template_path is None:
+        raise ValueError("template_path is required. Please specify --template_path when running from command line.")
+
     print(sub_folder)
     img_dict = load_images(
         reg_image=f"{sub_folder}/{reg_image_name}", template_path=template_path
@@ -210,7 +213,7 @@ def main(
 def main_wrapper(
     sub_folder: str,
     reg_image_name: str = "registered_t2_img.nii.gz",
-    template_path: str = "/Users/stan/Projects/R2M2_processing/data/external/mean_space_2mm_brain.nii.gz",
+    template_path: str = None,
     radius=3,
 ) -> dict:
     """
@@ -318,7 +321,7 @@ def get_args():
     parser.add_argument(
         "--template_path",
         dest="template_path",
-        default=None,
+        required=True,
         type=str,
         help="Path to template image file (e.g., MNI152_T1_2mm.nii.gz). Template mask must exist as {template}_mask.nii.gz",
     )
@@ -349,16 +352,12 @@ if __name__ == "__main__":
         import sys
         sys.exit(1)
 
-    # Create wrapper function to pass template_path if provided
-    if args.template_path:
-        def main_wrapper(sub_folder):
-            return main(sub_folder, template_path=args.template_path)
+    # Create wrapper function to pass template_path
+    def main_wrapper(sub_folder):
+        return main(sub_folder, template_path=args.template_path)
 
-        with Pool(args.num_python_jobs) as pool:
-            res = pool.map(main_wrapper, flist)
-    else:
-        with Pool(args.num_python_jobs) as pool:
-            res = pool.map(main, flist)
+    with Pool(args.num_python_jobs) as pool:
+        res = pool.map(main_wrapper, flist)
 
     dict_data = [r for r in res if type(r) is dict]
     err_data = [r for r in res if type(r) is not dict]

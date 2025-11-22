@@ -475,7 +475,7 @@ def comp_stats(
 def main(
     sub_folder: str,
     reg_image_name: str = "registered_t2_img.nii.gz",
-    template_path: str = "/Users/stan/Projects/R2M2_processing/data/external/mean_space_2mm_brain.nii.gz",
+    template_path: str = None,
     radius: int = 3,
     use_numba_mi: bool = False,
 ) -> dict:
@@ -493,6 +493,10 @@ def main(
         Dictionary with subject statistics, or Exception on failure
     """
     import os
+
+    if template_path is None:
+        raise ValueError("template_path is required. Please specify --template_path when running from command line.")
+
     print(sub_folder)
     img_dict = load_images(
         reg_image=f"{sub_folder}/{reg_image_name}", template_path=template_path
@@ -574,7 +578,7 @@ def get_args():
     parser.add_argument(
         "--template_path",
         dest="template_path",
-        default=None,
+        required=True,
         type=str,
         help="Path to template image file (e.g., MNI152_T1_2mm.nii.gz). Template mask must exist as {template}_mask.nii.gz",
     )
@@ -621,23 +625,21 @@ if __name__ == "__main__":
     print(f"R2M2 Numba-Accelerated Processing")
     print(f"{'='*70}")
     print(f"Mode: {'Full Numba (approximate MI)' if args.use_numba_mi else 'Hybrid (ANTs MI + Numba MSE/CORR)'}")
+    print(f"Template: {args.template_path}")
     print(f"Subjects: {len(flist)}")
     print(f"Parallel jobs: {args.num_python_jobs}")
     print(f"ITK cores per job: {args.num_itk_cores}")
     print(f"Radius: {args.radius}")
-    if args.template_path:
-        print(f"Template: {args.template_path}")
     print(f"{'='*70}\n")
 
     # Create wrapper function with fixed parameters
     def main_wrapper(sub_folder):
-        kwargs = {
-            'radius': args.radius,
-            'use_numba_mi': args.use_numba_mi
-        }
-        if args.template_path:
-            kwargs['template_path'] = args.template_path
-        return main(sub_folder, **kwargs)
+        return main(
+            sub_folder,
+            radius=args.radius,
+            use_numba_mi=args.use_numba_mi,
+            template_path=args.template_path
+        )
 
     with Pool(args.num_python_jobs) as pool:
         res = pool.map(main_wrapper, flist)

@@ -333,6 +333,13 @@ if __name__ == "__main__":
     elif args.search_string is not None:
         flist = glob.glob(args.search_string)
         flist = [os.path.split(f)[0] for f in flist]
+    else:
+        print("\nError: You must provide either --list_path or --search_string\n")
+        print("Examples:")
+        print("  python r2m2_base.py --list_path subjects.txt")
+        print("  python r2m2_base.py --search_string './sub-*/registered_t2_img.nii.gz'\n")
+        import sys
+        sys.exit(1)
 
     with Pool(args.num_python_jobs) as pool:
         res = pool.map(main, flist)

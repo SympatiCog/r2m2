@@ -398,7 +398,7 @@ class TestMainFunction:
         mock_load.side_effect = FileNotFoundError("File not found")
 
         with pytest.raises(FileNotFoundError):
-            r2m2_base.main(self.sub_folder)
+            r2m2_base.main(self.sub_folder, template_path="/dummy/template.nii.gz")
 
     def test_main_wrapper_catches_exceptions(self):
         """Test that main_wrapper catches exceptions and returns error dict"""
@@ -425,32 +425,36 @@ class TestArgumentParsing:
 
     def test_get_args_defaults(self):
         """Test that default arguments are set correctly"""
-        with patch('sys.argv', ['r2m2_base.py']):
+        with patch('sys.argv', ['r2m2_base.py', '--template_path', '/path/to/template.nii.gz']):
             args = r2m2_base.get_args()
 
             assert args.num_python_jobs == 4
             assert args.num_itk_cores == "1"
             assert args.list_path is None
             assert args.search_string is None
+            assert args.template_path == '/path/to/template.nii.gz'
 
     def test_get_args_with_list_path(self):
         """Test parsing with list_path argument"""
-        with patch('sys.argv', ['r2m2_base.py', '--list_path', '/path/to/list.txt']):
+        with patch('sys.argv', ['r2m2_base.py', '--template_path', '/path/to/template.nii.gz', '--list_path', '/path/to/list.txt']):
             args = r2m2_base.get_args()
             assert args.list_path == '/path/to/list.txt'
+            assert args.template_path == '/path/to/template.nii.gz'
 
     def test_get_args_with_search_string(self):
         """Test parsing with search_string argument"""
-        with patch('sys.argv', ['r2m2_base.py', '--search_string', './sub-*/*.nii.gz']):
+        with patch('sys.argv', ['r2m2_base.py', '--template_path', '/path/to/template.nii.gz', '--search_string', './sub-*/*.nii.gz']):
             args = r2m2_base.get_args()
             assert args.search_string == './sub-*/*.nii.gz'
+            assert args.template_path == '/path/to/template.nii.gz'
 
     def test_get_args_with_parallelization(self):
         """Test parsing with custom parallelization settings"""
-        with patch('sys.argv', ['r2m2_base.py', '--num_python_jobs', '8', '--num_itk_cores', '2']):
+        with patch('sys.argv', ['r2m2_base.py', '--template_path', '/path/to/template.nii.gz', '--num_python_jobs', '8', '--num_itk_cores', '2']):
             args = r2m2_base.get_args()
             assert args.num_python_jobs == 8
             assert args.num_itk_cores == "2"
+            assert args.template_path == '/path/to/template.nii.gz'
 
 
 class TestIntegration:
